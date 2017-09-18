@@ -33,3 +33,15 @@ func TestConnectWithParam(t *testing.T){
 		t.Error("client not created by conn")
 	}
 }
+
+func TestConnectGetSessionHandle(t *testing.T){
+	conn, err := Connect(nil)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if conn.sessionHandle() == nil {
+		t.Error("Session handle not created after connection")
+	}
+}

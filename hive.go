@@ -22,10 +22,15 @@ func Connect(params *ConnParams) (*Connection, error) {
 
 type Connection struct {
 	_client *tcliservice.TCLIServiceClient
+	_sessionHandle *tcliservice.TSessionHandle
 }
 
 func (p *Connection) client() *tcliservice.TCLIServiceClient{
 	return p._client
+}
+
+func (p *Connection) sessionHandle() *tcliservice.TSessionHandle{
+	return p._sessionHandle
 }
 
 func newConnection(params *ConnParams)  (*Connection, error) {
@@ -52,5 +57,30 @@ func newConnection(params *ConnParams)  (*Connection, error) {
 
 	client := tcliservice.NewTCLIServiceClientFactory(transport, protocol)
 
-	return &Connection{_client: client}, nil
+	err = transport.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	protocolVersion := tcliservice.TProtocolVersion_HIVE_CLI_SERVICE_PROTOCOL_V10
+
+	openSessionReq := &tcliservice.TOpenSessionReq{
+		ClientProtocol: protocolVersion,
+	}
+
+	response, err := client.OpenSession(openSessionReq)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if response.SessionHandle == nil {
+		return nil, fmt.Errorf("No session handle created after connection")
+	}
+
+	if response.ServerProtocolVersion != protocolVersion {
+		return nil, fmt.Errorf("Unable to handle protocol version %s", response.ServerProtocolVersion)
+	}
+
+	return &Connection{_client: client, _sessionHandle: response.SessionHandle}, nil
 }
