@@ -45,3 +45,17 @@ func TestConnectGetSessionHandle(t *testing.T){
 		t.Error("Session handle not created after connection")
 	}
 }
+
+func TestExecuteQuery(t *testing.T){
+	conn, err := Connect(nil)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	conn.Execute("select * from test")
+
+	if conn._operationHandle == nil {
+		t.Error("Error receiveing operation handle")
+	}
+}

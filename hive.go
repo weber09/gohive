@@ -23,6 +23,7 @@ func Connect(params *ConnParams) (*Connection, error) {
 type Connection struct {
 	_client *tcliservice.TCLIServiceClient
 	_sessionHandle *tcliservice.TSessionHandle
+	_operationHandle *tcliservice.TOperationHandle
 }
 
 func (p *Connection) client() *tcliservice.TCLIServiceClient{
@@ -33,10 +34,15 @@ func (p *Connection) sessionHandle() *tcliservice.TSessionHandle{
 	return p._sessionHandle
 }
 
+func (p *Connection) operationHandle() *tcliservice.TOperationHandle {
+	return p._operationHandle
+}
+
 func newConnection(params *ConnParams)  (*Connection, error) {
 
 	host := "localhost"
 	port := "10000"
+	database := "default"
 	if params != nil {
 		if len(params.host) > 0 {
 			host = params.host
@@ -44,6 +50,10 @@ func newConnection(params *ConnParams)  (*Connection, error) {
 
 		if len(params.port) > 0 {
 			port = params.port
+		}
+
+		if len(params.database) > 0 {
+			database = params.database
 		}
 	}
 
@@ -82,5 +92,23 @@ func newConnection(params *ConnParams)  (*Connection, error) {
 		return nil, fmt.Errorf("Unable to handle protocol version %s", response.ServerProtocolVersion)
 	}
 
-	return &Connection{_client: client, _sessionHandle: response.SessionHandle}, nil
+	conn := &Connection{_client: client, _sessionHandle: response.SessionHandle}
+
+	conn.Execute(fmt.Sprintf("USE %s", database ))
+
+	return conn, nil
+}
+
+func (p *Connection) Execute(query string) error{
+	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
+
+	response, err := p._client.ExecuteStatement(req)
+
+	if err != nil {
+		return err
+	}
+
+	p._operationHandle = response.OperationHandle
+
+	return nil
 }
