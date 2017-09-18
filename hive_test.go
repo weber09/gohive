@@ -53,7 +53,7 @@ func TestExecuteQuery(t *testing.T){
 		t.Error(err)
 	}
 
-	conn.Execute("select * from test")
+	conn.Execute("insert into test (id, name) values (4, 'gotest')")
 
 	if conn._operationHandle == nil {
 		t.Error("Error receiveing operation handle")

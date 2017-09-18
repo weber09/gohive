@@ -1,36 +1,35 @@
 package gohive
 
 import (
-	"github.com/weber09/gohive/tcliservice"
-	"git.apache.org/thrift.git/lib/go/thrift"
 	"fmt"
+	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/weber09/gohive/tcliservice"
 )
 
 type ConnParams struct {
-	host string
-	port string
-	auth string
+	host     string
+	port     string
+	auth     string
 	database string
 	username string
 	password string
 }
-
 
 func Connect(params *ConnParams) (*Connection, error) {
 	return newConnection(params)
 }
 
 type Connection struct {
-	_client *tcliservice.TCLIServiceClient
-	_sessionHandle *tcliservice.TSessionHandle
+	_client          *tcliservice.TCLIServiceClient
+	_sessionHandle   *tcliservice.TSessionHandle
 	_operationHandle *tcliservice.TOperationHandle
 }
 
-func (p *Connection) client() *tcliservice.TCLIServiceClient{
+func (p *Connection) client() *tcliservice.TCLIServiceClient {
 	return p._client
 }
 
-func (p *Connection) sessionHandle() *tcliservice.TSessionHandle{
+func (p *Connection) sessionHandle() *tcliservice.TSessionHandle {
 	return p._sessionHandle
 }
 
@@ -38,7 +37,7 @@ func (p *Connection) operationHandle() *tcliservice.TOperationHandle {
 	return p._operationHandle
 }
 
-func newConnection(params *ConnParams)  (*Connection, error) {
+func newConnection(params *ConnParams) (*Connection, error) {
 
 	host := "localhost"
 	port := "10000"
@@ -94,12 +93,12 @@ func newConnection(params *ConnParams)  (*Connection, error) {
 
 	conn := &Connection{_client: client, _sessionHandle: response.SessionHandle}
 
-	conn.Execute(fmt.Sprintf("USE %s", database ))
+	conn.Execute(fmt.Sprintf("USE %s", database))
 
 	return conn, nil
 }
 
-func (p *Connection) Execute(query string) error{
+func (p *Connection) Execute(query string) error {
 	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
 
 	response, err := p._client.ExecuteStatement(req)
