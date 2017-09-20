@@ -7,12 +7,12 @@ import (
 )
 
 type ConnParams struct {
-	host     string
-	port     string
-	auth     string
-	database string
-	username string
-	password string
+	Host     string
+	Port     string
+	Auth     string
+	Database string
+	Username string
+	Password string
 }
 
 func Connect(params *ConnParams) (*Connection, error) {
@@ -43,16 +43,16 @@ func newConnection(params *ConnParams) (*Connection, error) {
 	port := "10000"
 	database := "default"
 	if params != nil {
-		if len(params.host) > 0 {
-			host = params.host
+		if len(params.Host) > 0 {
+			host = params.Host
 		}
 
-		if len(params.port) > 0 {
-			port = params.port
+		if len(params.Port) > 0 {
+			port = params.Port
 		}
 
-		if len(params.database) > 0 {
-			database = params.database
+		if len(params.Database) > 0 {
+			database = params.Database
 		}
 	}
 

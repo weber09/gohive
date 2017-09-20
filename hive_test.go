@@ -19,7 +19,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestConnectWithParam(t *testing.T){
-	conn, err := Connect(&ConnParams{host: "localhost", database: "default", auth: "NOSASL"})
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Error(err)
