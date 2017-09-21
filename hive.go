@@ -98,16 +98,21 @@ func newConnection(params *ConnParams) (*Connection, error) {
 	return conn, nil
 }
 
-func (p *Connection) Execute(query string) error {
+func (p *Connection) Execute(query string) (string, error) {
 	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
 
 	response, err := p._client.ExecuteStatement(req)
 
+	code := "error"
+	if response != nil {
+		code = response.Status.GetStatusCode().String()
+	}
+
 	if err != nil {
-		return err
+		return code, err
 	}
 
 	p._operationHandle = response.OperationHandle
 
-	return nil
+	return code, nil
 }

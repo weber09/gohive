@@ -1,7 +1,6 @@
 package gohive
 
-import
-(
+import (
 	"testing"
 )
 
@@ -18,7 +17,7 @@ func TestConnect(t *testing.T) {
 
 }
 
-func TestConnectWithParam(t *testing.T){
+func TestConnectWithParam(t *testing.T) {
 	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
@@ -34,7 +33,7 @@ func TestConnectWithParam(t *testing.T){
 	}
 }
 
-func TestConnectGetSessionHandle(t *testing.T){
+func TestConnectGetSessionHandle(t *testing.T) {
 	conn, err := Connect(nil)
 
 	if err != nil {
@@ -46,16 +45,22 @@ func TestConnectGetSessionHandle(t *testing.T){
 	}
 }
 
-func TestExecuteQuery(t *testing.T){
+func TestExecuteQuery(t *testing.T) {
 	conn, err := Connect(nil)
 
 	if err != nil {
 		t.Error(err)
 	}
 
-	conn.Execute("insert into test (id, name) values (4, 'gotest')")
+	status, err := conn.Execute("insert into test (id, name) values (4, 'gotest')")
+
+	if err != nil {
+		t.Errorf("error executing query %s", err)
+	}
 
 	if conn._operationHandle == nil {
 		t.Error("Error receiveing operation handle")
 	}
+
+	t.Logf("status exec %s", status)
 }
