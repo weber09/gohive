@@ -2,6 +2,7 @@ package gohive
 
 import (
 	"fmt"
+
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/weber09/gohive/tcliservice"
 )
@@ -42,6 +43,8 @@ func newConnection(params *ConnParams) (*Connection, error) {
 	host := "localhost"
 	port := "10000"
 	database := "default"
+	username := ""
+	password := ""
 	if params != nil {
 		if len(params.Host) > 0 {
 			host = params.Host
@@ -75,6 +78,8 @@ func newConnection(params *ConnParams) (*Connection, error) {
 
 	openSessionReq := &tcliservice.TOpenSessionReq{
 		ClientProtocol: protocolVersion,
+		Username:       &username,
+		Password:       &password,
 	}
 
 	response, err := client.OpenSession(openSessionReq)
@@ -99,6 +104,7 @@ func newConnection(params *ConnParams) (*Connection, error) {
 }
 
 func (p *Connection) Execute(query string) (string, error) {
+
 	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
 
 	response, err := p._client.ExecuteStatement(req)
@@ -115,4 +121,48 @@ func (p *Connection) Execute(query string) (string, error) {
 	p._operationHandle = response.OperationHandle
 
 	return code, nil
+}
+
+func (p *Connection) FetchOne() (string, error) {
+	req := &tcliservice.TFetchResultsReq{
+		OperationHandle: p.operationHandle(),
+		Orientation:     tcliservice.TFetchOrientation_FETCH_NEXT,
+		MaxRows:         1,
+	}
+
+	response, err := p.client().FetchResults(req)
+	if err != nil {
+		return "", err
+	}
+
+	result := ""
+
+	for i, c := range response.Results.Columns {
+		if c.IsSetBinaryVal() {
+			result += string(c.GetBinaryVal().GetValues()[0])
+		} else if c.IsSetBoolVal() {
+			result += fmt.Sprintf("%v", c.GetBoolVal().GetValues()[0])
+		} else if c.IsSetByteVal() {
+			result += fmt.Sprintf("%v", c.GetByteVal().GetValues()[0])
+		} else if c.IsSetDoubleVal() {
+			result += fmt.Sprintf("%v", c.GetDoubleVal().GetValues()[0])
+		} else if c.IsSetI16Val() {
+			result += fmt.Sprintf("%v", c.GetI16Val().GetValues()[0])
+		} else if c.IsSetI32Val() {
+			result += fmt.Sprintf("%v", c.GetI32Val().GetValues()[0])
+		} else if c.IsSetI64Val() {
+			result += fmt.Sprintf("%v", c.GetI64Val().GetValues()[0])
+		} else if c.IsSetStringVal() {
+			result += fmt.Sprintf("\"%s\"", c.GetStringVal().GetValues()[0])
+		}
+		if i < len(response.Results.Columns)-1 {
+			result += ", "
+		}
+	}
+
+	return result, nil
+}
+
+func (p *Connection) fetchWhile() {
+
 }

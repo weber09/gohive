@@ -45,10 +45,31 @@ func TestConnectGetSessionHandle(t *testing.T) {
 	}
 }
 
-func TestExecuteQuery(t *testing.T) {
+func TestCreateTable(t *testing.T) {
 	conn, err := Connect(nil)
 
 	if err != nil {
+		t.Error(err)
+	}
+
+	status, err := conn.Execute("create table test(id string, name string)")
+
+	if err != nil {
+		t.Errorf("error executing command %s", err)
+	}
+
+	if conn._operationHandle == nil {
+		t.Error("Error receiveing operation handle")
+	}
+
+	t.Logf("status exec %s", status)
+}
+
+func TestExecuteInsertionCommand(t *testing.T) {
+	conn, err := Connect(nil)
+
+	if err != nil {
+		t.Errorf("Error connecting [%s]", err)
 		t.Error(err)
 	}
 
@@ -63,4 +84,31 @@ func TestExecuteQuery(t *testing.T) {
 	}
 
 	t.Logf("status exec %s", status)
+}
+
+func TestExecuteQuery(t *testing.T) {
+	conn, err := Connect(nil)
+
+	if err != nil {
+		t.Errorf("Error connecting [%s]", err)
+		t.Error(err)
+	}
+
+	_, err = conn.Execute("select * from test")
+
+	if err != nil {
+		t.Errorf("error executing query %s", err)
+	}
+
+	if conn._operationHandle == nil {
+		t.Error("Error receiveing operation handle")
+	}
+
+	fetch, err := conn.FetchOne()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Logf("fetchOne = [%s]", fetch)
 }
