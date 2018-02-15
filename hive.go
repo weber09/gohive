@@ -7,6 +7,7 @@ import (
 	"github.com/weber09/gohive/tcliservice"
 )
 
+//ConnParams holds informations for connection to Hive instance
 type ConnParams struct {
 	Host     string
 	Port     string
@@ -16,10 +17,12 @@ type ConnParams struct {
 	Password string
 }
 
+//Connect calls the newConnection function
 func Connect(params *ConnParams) (*Connection, error) {
 	return newConnection(params)
 }
 
+//Connection is the struct holding the thrift generated structs to connect and handle the session with Hive
 type Connection struct {
 	_client          *tcliservice.TCLIServiceClient
 	_sessionHandle   *tcliservice.TSessionHandle
@@ -103,6 +106,7 @@ func newConnection(params *ConnParams) (*Connection, error) {
 	return conn, nil
 }
 
+//Execute executes a query or command to the Hive connected instance
 func (p *Connection) Execute(query string) (string, error) {
 
 	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
@@ -123,6 +127,7 @@ func (p *Connection) Execute(query string) (string, error) {
 	return code, nil
 }
 
+//FetchOne fetches one row of data from Hive
 func (p *Connection) FetchOne() (interface{}, error) {
 	req := &tcliservice.TFetchResultsReq{
 		OperationHandle: p.operationHandle(),
@@ -141,7 +146,10 @@ func (p *Connection) FetchOne() (interface{}, error) {
 		return nil, nil
 	}
 
-	return rows[0], nil
+	row := rows[0]
+	rows = rows[1:]
+
+	return row, nil
 }
 
 func mountResults(columns []*tcliservice.TColumn) [][]interface{} {
