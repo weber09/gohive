@@ -147,7 +147,7 @@ func TestExecuteComplete(t *testing.T) {
 
 	t.Logf("fetchOne = [%v]", fetch)
 
-	_, err := conn.Execute("drop table test")
+	_, err = conn.Execute("drop table test")
 
 	if err != nil {
 		t.Errorf("Error dropping table: [%s]", err)

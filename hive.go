@@ -188,12 +188,12 @@ func joinColumnsInRows(column []interface{}, rows *[][]interface{}, nrRows int) 
 
 	for j := 0; j < nrRows; j++ {
 		row := make([]interface{}, 0)
-		if len(wRows) < j {
+		if len(wRows) <= j {
+			row = append(row, column[j])
 			wRows = append(wRows, row)
 		} else {
-			row = wRows[j]
+			wRows[j] = append(wRows[j], column[j])
 		}
-		row = append(row, column[j])
 	}
 
 	return wRows, nrRows
