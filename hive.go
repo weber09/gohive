@@ -123,11 +123,11 @@ func (p *Connection) Execute(query string) (string, error) {
 	return code, nil
 }
 
-func (p *Connection) FetchOne() (string, error) {
+func (p *Connection) FetchOne() (interface{}, error) {
 	req := &tcliservice.TFetchResultsReq{
 		OperationHandle: p.operationHandle(),
 		Orientation:     tcliservice.TFetchOrientation_FETCH_NEXT,
-		MaxRows:         1,
+		MaxRows:         1000,
 	}
 
 	response, err := p.client().FetchResults(req)
@@ -135,34 +135,66 @@ func (p *Connection) FetchOne() (string, error) {
 		return "", err
 	}
 
-	result := ""
+	rows := mountResults(response.Results.GetColumns())
 
-	for i, c := range response.Results.Columns {
+	if len(rows) < 1 {
+		return nil, nil
+	}
+
+	return rows[0], nil
+}
+
+func mountResults(columns []*tcliservice.TColumn) [][]interface{} {
+	rows := make([][]interface{}, 0)
+	nrRows := 0
+	column := make([]interface{}, 0)
+	for _, c := range columns {
 		if c.IsSetBinaryVal() {
-			result += string(c.GetBinaryVal().GetValues()[0])
+			column = c.GetBinaryVal().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetBoolVal() {
-			result += fmt.Sprintf("%v", c.GetBoolVal().GetValues()[0])
+			column = c.GetBoolVal().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetByteVal() {
-			result += fmt.Sprintf("%v", c.GetByteVal().GetValues()[0])
+			column = c.GetByteVal().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetDoubleVal() {
-			result += fmt.Sprintf("%v", c.GetDoubleVal().GetValues()[0])
+			column = c.GetDoubleVal().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetI16Val() {
-			result += fmt.Sprintf("%v", c.GetI16Val().GetValues()[0])
+			column = c.GetI16Val().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetI32Val() {
-			result += fmt.Sprintf("%v", c.GetI32Val().GetValues()[0])
+			column = c.GetI32Val().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetI64Val() {
-			result += fmt.Sprintf("%v", c.GetI64Val().GetValues()[0])
+			column = c.GetI64Val().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		} else if c.IsSetStringVal() {
-			result += fmt.Sprintf("\"%s\"", c.GetStringVal().GetValues()[0])
-		}
-		if i < len(response.Results.Columns)-1 {
-			result += ", "
+			column = c.GetStringVal().GetInterfaceArray()
+			rows, nrRows = joinColumnsInRows(column, &rows, nrRows)
 		}
 	}
 
-	return result, nil
+	return rows
 }
 
-func (p *Connection) fetchWhile() {
+func joinColumnsInRows(column []interface{}, rows *[][]interface{}, nrRows int) ([][]interface{}, int) {
+	wRows := *rows
 
+	if nrRows == 0 {
+		nrRows = len(column)
+	}
+
+	for j := 0; j < nrRows; j++ {
+		row := make([]interface{}, 0)
+		if len(wRows) < j {
+			wRows = append(wRows, row)
+		} else {
+			row = wRows[j]
+		}
+		row = append(row, column[j])
+	}
+
+	return wRows, nrRows
 }

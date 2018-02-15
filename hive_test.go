@@ -112,3 +112,44 @@ func TestExecuteQuery(t *testing.T) {
 
 	t.Logf("fetchOne = [%s]", fetch)
 }
+
+func TestExecuteComplete(t *testing.T) {
+	conn, err := Connect(nil)
+
+	if err != nil {
+		t.Errorf("Error connecting [%s]", err)
+		t.Error(err)
+	}
+
+	_, err = conn.Execute("create table test (id int, name string)")
+
+	if err != nil {
+		t.Errorf("Error crating table: [%s]", err)
+	}
+
+	_, err = conn.Execute("insert into test (id, name) values (1, \"Mark\"), (2, \"John\")")
+
+	if err != nil {
+		t.Errorf("Error inserting data: [%s]", err)
+	}
+
+	_, err = conn.Execute("select * from test")
+
+	if err != nil {
+		t.Errorf("Error querying the table: [%s]", err)
+	}
+
+	fetch, err := conn.FetchOne()
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Logf("fetchOne = [%v]", fetch)
+
+	_, err := conn.Execute("drop table test")
+
+	if err != nil {
+		t.Errorf("Error dropping table: [%s]", err)
+	}
+}
