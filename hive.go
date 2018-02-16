@@ -2,9 +2,19 @@ package gohive
 
 import (
 	"fmt"
+	"time"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 	"github.com/weber09/gohive/tcliservice"
+)
+
+const (
+	//HiveNone status when no query/command executed
+	HiveNone = "None"
+	//HiveRunning status when a query/command was executed
+	HiveRunning = "Running"
+	//HiveFinished status when a query/command has finished its execution
+	HiveFinished = "Finished"
 )
 
 //ConnParams holds informations for connection to Hive instance
@@ -27,6 +37,8 @@ type Connection struct {
 	_client          *tcliservice.TCLIServiceClient
 	_sessionHandle   *tcliservice.TSessionHandle
 	_operationHandle *tcliservice.TOperationHandle
+	_data            [][]interface{}
+	_status          string
 }
 
 func (p *Connection) client() *tcliservice.TCLIServiceClient {
@@ -103,7 +115,13 @@ func newConnection(params *ConnParams) (*Connection, error) {
 
 	conn.Execute(fmt.Sprintf("USE %s", database))
 
+	conn.resetStatus()
+
 	return conn, nil
+}
+
+func (p *Connection) resetStatus() {
+	p._status = HiveNone
 }
 
 //Execute executes a query or command to the Hive connected instance
@@ -124,11 +142,76 @@ func (p *Connection) Execute(query string) (string, error) {
 
 	p._operationHandle = response.OperationHandle
 
+	p._status = HiveRunning
+
 	return code, nil
 }
 
 //FetchOne fetches one row of data from Hive
-func (p *Connection) FetchOne() (interface{}, error) {
+func (p *Connection) FetchOne() ([]interface{}, error) {
+	if p._status == HiveNone {
+		return nil, fmt.Errorf("No query were run to fetch data")
+	}
+
+	for {
+		if p._status == HiveFinished {
+			break
+		}
+
+		p.fetchData()
+
+		time.Sleep(1)
+	}
+
+	if len(p._data) == 0 {
+		return nil, nil
+	}
+
+	row := p._data[0]
+	p._data = p._data[1:]
+
+	return row, nil
+}
+
+//FetchMany fetches a number of rows defined in the size parameter (Use 0 to return the default 1000 rows)
+func (p *Connection) FetchMany(size int) ([][]interface{}, error) {
+
+	if size == 0 {
+		size = 1000
+	}
+
+	rows := make([][]interface{}, 0, size)
+	for i := 0; i < size; i++ {
+		row, err := p.FetchOne()
+		if err != nil {
+			return nil, err
+		}
+		if row == nil {
+			break
+		}
+		rows = append(rows, row)
+	}
+
+	return rows, nil
+}
+
+//FetchAll fetches all rows of a Hive table
+func (p *Connection) FetchAll() ([][]interface{}, error) {
+	rows := make([][]interface{}, 0)
+	for {
+		row, err := p.FetchOne()
+		if err != nil {
+			return nil, err
+		}
+		if row == nil {
+			break
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+func (p *Connection) fetchData() error {
 	req := &tcliservice.TFetchResultsReq{
 		OperationHandle: p.operationHandle(),
 		Orientation:     tcliservice.TFetchOrientation_FETCH_NEXT,
@@ -137,19 +220,23 @@ func (p *Connection) FetchOne() (interface{}, error) {
 
 	response, err := p.client().FetchResults(req)
 	if err != nil {
-		return "", err
+		return err
+	}
+
+	if response.Results == nil {
+		p._status = HiveFinished
+		return nil
 	}
 
 	rows := mountResults(response.Results.GetColumns())
 
-	if len(rows) < 1 {
-		return nil, nil
+	p._data = append(p._data, rows...)
+
+	if len(rows) == 0 {
+		p._status = HiveFinished
 	}
 
-	row := rows[0]
-	rows = rows[1:]
-
-	return row, nil
+	return nil
 }
 
 func mountResults(columns []*tcliservice.TColumn) [][]interface{} {
