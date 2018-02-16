@@ -34,23 +34,28 @@ func Connect(params *ConnParams) (*Connection, error) {
 
 //Connection is the struct holding the thrift generated structs to connect and handle the session with Hive
 type Connection struct {
-	_client          *tcliservice.TCLIServiceClient
-	_sessionHandle   *tcliservice.TSessionHandle
-	_operationHandle *tcliservice.TOperationHandle
-	_data            [][]interface{}
-	_status          string
+	client          *tcliservice.TCLIServiceClient
+	sessionHandle   *tcliservice.TSessionHandle
+	operationHandle *tcliservice.TOperationHandle
+	data            [][]interface{}
+	status          string
+	transport       *thrift.TSocket
 }
 
-func (p *Connection) client() *tcliservice.TCLIServiceClient {
-	return p._client
+func (p *Connection) getClient() *tcliservice.TCLIServiceClient {
+	return p.client
 }
 
-func (p *Connection) sessionHandle() *tcliservice.TSessionHandle {
-	return p._sessionHandle
+func (p *Connection) getSessionHandle() *tcliservice.TSessionHandle {
+	return p.sessionHandle
 }
 
-func (p *Connection) operationHandle() *tcliservice.TOperationHandle {
-	return p._operationHandle
+func (p *Connection) getOperationHandle() *tcliservice.TOperationHandle {
+	return p.operationHandle
+}
+
+func (p *Connection) getTransport() *thrift.TSocket {
+	return p.transport
 }
 
 func newConnection(params *ConnParams) (*Connection, error) {
@@ -111,25 +116,46 @@ func newConnection(params *ConnParams) (*Connection, error) {
 		return nil, fmt.Errorf("Unable to handle protocol version %s", response.ServerProtocolVersion)
 	}
 
-	conn := &Connection{_client: client, _sessionHandle: response.SessionHandle}
+	conn := &Connection{client: client, sessionHandle: response.SessionHandle}
 
 	conn.Execute(fmt.Sprintf("USE %s", database))
 
 	conn.resetStatus()
 
+	conn.transport = transport
+
 	return conn, nil
 }
 
 func (p *Connection) resetStatus() {
-	p._status = HiveNone
+	p.status = HiveNone
+}
+
+func (p *Connection) close() error {
+	req := &tcliservice.TCloseSessionReq{SessionHandle: p.getSessionHandle()}
+	response, err := p.getClient().CloseSession(req)
+	if err != nil {
+		return err
+	}
+
+	if response.Status.StatusCode != tcliservice.TStatusCode_SUCCESS_STATUS {
+		return fmt.Errorf("Error status closing session with hive: [%s]", *response.Status.ErrorMessage)
+	}
+
+	err = p.getTransport().Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //Execute executes a query or command to the Hive connected instance
 func (p *Connection) Execute(query string) (string, error) {
 
-	req := &tcliservice.TExecuteStatementReq{SessionHandle: p._sessionHandle, Statement: query}
+	req := &tcliservice.TExecuteStatementReq{SessionHandle: p.sessionHandle, Statement: query}
 
-	response, err := p._client.ExecuteStatement(req)
+	response, err := p.client.ExecuteStatement(req)
 
 	code := "error"
 	if response != nil {
@@ -140,21 +166,21 @@ func (p *Connection) Execute(query string) (string, error) {
 		return code, err
 	}
 
-	p._operationHandle = response.OperationHandle
+	p.operationHandle = response.OperationHandle
 
-	p._status = HiveRunning
+	p.status = HiveRunning
 
 	return code, nil
 }
 
 //FetchOne fetches one row of data from Hive
 func (p *Connection) FetchOne() ([]interface{}, error) {
-	if p._status == HiveNone {
+	if p.status == HiveNone {
 		return nil, fmt.Errorf("No query were run to fetch data")
 	}
 
 	for {
-		if p._status == HiveFinished {
+		if p.status == HiveFinished {
 			break
 		}
 
@@ -163,12 +189,12 @@ func (p *Connection) FetchOne() ([]interface{}, error) {
 		time.Sleep(1)
 	}
 
-	if len(p._data) == 0 {
+	if len(p.data) == 0 {
 		return nil, nil
 	}
 
-	row := p._data[0]
-	p._data = p._data[1:]
+	row := p.data[0]
+	p.data = p.data[1:]
 
 	return row, nil
 }
@@ -213,27 +239,27 @@ func (p *Connection) FetchAll() ([][]interface{}, error) {
 
 func (p *Connection) fetchData() error {
 	req := &tcliservice.TFetchResultsReq{
-		OperationHandle: p.operationHandle(),
+		OperationHandle: p.getOperationHandle(),
 		Orientation:     tcliservice.TFetchOrientation_FETCH_NEXT,
 		MaxRows:         1000,
 	}
 
-	response, err := p.client().FetchResults(req)
+	response, err := p.getClient().FetchResults(req)
 	if err != nil {
 		return err
 	}
 
 	if response.Results == nil {
-		p._status = HiveFinished
+		p.status = HiveFinished
 		return nil
 	}
 
 	rows := mountResults(response.Results.GetColumns())
 
-	p._data = append(p._data, rows...)
+	p.data = append(p.data, rows...)
 
 	if len(rows) == 0 {
-		p._status = HiveFinished
+		p.status = HiveFinished
 	}
 
 	return nil

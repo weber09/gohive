@@ -29,7 +29,7 @@ func TestConnectWithParam(t *testing.T) {
 		t.Error("conn not created with params")
 	}
 
-	if conn.client() == nil {
+	if conn.getClient() == nil {
 		t.Error("client not created by conn")
 	}
 }
@@ -41,7 +41,7 @@ func TestConnectGetSessionHandle(t *testing.T) {
 		t.Error(err)
 	}
 
-	if conn.sessionHandle() == nil {
+	if conn.getSessionHandle() == nil {
 		t.Error("Session handle not created after connection")
 	}
 }
@@ -59,7 +59,7 @@ func TestCreateTable(t *testing.T) {
 		t.Errorf("error executing command %s", err)
 	}
 
-	if conn._operationHandle == nil {
+	if conn.operationHandle == nil {
 		t.Error("Error receiveing operation handle")
 	}
 
@@ -80,7 +80,7 @@ func TestExecuteInsertionCommand(t *testing.T) {
 		t.Errorf("error executing query %s", err)
 	}
 
-	if conn._operationHandle == nil {
+	if conn.operationHandle == nil {
 		t.Error("Error receiveing operation handle")
 	}
 
@@ -101,7 +101,7 @@ func TestExecuteQuery(t *testing.T) {
 		t.Errorf("error executing query %s", err)
 	}
 
-	if conn._operationHandle == nil {
+	if conn.operationHandle == nil {
 		t.Error("Error receiveing operation handle")
 	}
 
