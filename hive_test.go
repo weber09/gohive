@@ -6,7 +6,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Error(err)
@@ -35,7 +35,7 @@ func TestConnectWithParam(t *testing.T) {
 }
 
 func TestConnectGetSessionHandle(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Error(err)
@@ -47,7 +47,7 @@ func TestConnectGetSessionHandle(t *testing.T) {
 }
 
 func TestCreateTable(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Error(err)
@@ -67,7 +67,7 @@ func TestCreateTable(t *testing.T) {
 }
 
 func TestExecuteInsertionCommand(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -88,7 +88,7 @@ func TestExecuteInsertionCommand(t *testing.T) {
 }
 
 func TestExecuteQuery(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -115,7 +115,7 @@ func TestExecuteQuery(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchOne(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -156,7 +156,7 @@ func TestExecuteComplete_FetchOne(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchMany(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -200,7 +200,7 @@ func TestExecuteComplete_FetchMany(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchMany_MoreThanExistingRows(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -244,7 +244,7 @@ func TestExecuteComplete_FetchMany_MoreThanExistingRows(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchMany_Input0Size(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -288,7 +288,7 @@ func TestExecuteComplete_FetchMany_Input0Size(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchAll(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -332,7 +332,7 @@ func TestExecuteComplete_FetchAll(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchWithoutQuery(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)
@@ -369,7 +369,7 @@ func TestExecuteComplete_FetchWithoutQuery(t *testing.T) {
 }
 
 func TestExecuteComplete_FetchAll_5kData(t *testing.T) {
-	conn, err := Connect(nil)
+	conn, err := Connect(&ConnParams{Host: "localhost", Database: "default", Auth: "NOSASL"})
 
 	if err != nil {
 		t.Errorf("Error connecting [%s]", err)

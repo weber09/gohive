@@ -39,7 +39,7 @@ type Connection struct {
 	operationHandle *tcliservice.TOperationHandle
 	data            [][]interface{}
 	status          string
-	transport       *thrift.TSocket
+	transport       *thrift.TTransport
 }
 
 func (p *Connection) getClient() *tcliservice.TCLIServiceClient {
@@ -54,7 +54,7 @@ func (p *Connection) getOperationHandle() *tcliservice.TOperationHandle {
 	return p.operationHandle
 }
 
-func (p *Connection) getTransport() *thrift.TSocket {
+func (p *Connection) getTransport() *thrift.TTransport {
 	return p.transport
 }
 
@@ -65,6 +65,7 @@ func newConnection(params *ConnParams) (*Connection, error) {
 	database := "default"
 	username := ""
 	password := ""
+	auth := "NONE"
 	if params != nil {
 		if len(params.Host) > 0 {
 			host = params.Host
@@ -77,13 +78,38 @@ func newConnection(params *ConnParams) (*Connection, error) {
 		if len(params.Database) > 0 {
 			database = params.Database
 		}
+
+		if len(params.Auth) > 0 {
+			auth = params.Auth
+		}
 	}
 
-	transport, err := thrift.NewTSocket(fmt.Sprintf("%s:%s", host, port))
+	socket, err := thrift.NewTSocket(fmt.Sprintf("%s:%s", host, port))
 
 	if err != nil {
 		return nil, err
 	}
+
+	var transport thrift.TTransport
+
+	switch auth {
+	case "NOSASL":
+		transport, err = thrift.NewTBufferedTransportFactory(4096).GetTransport(socket)
+		if err != nil {
+			return nil, err
+		}
+		break
+	case "LDAP":
+	case "KERBEROS":
+	case "NONE":
+	case "CUSTOM":
+		fmt.Println("SASL!!")
+		break
+	default:
+		return nil, fmt.Errorf("Only NONE, NOSASL, LDAP, KERBEROS, CUSTOM authentication are supported. Got [%s]", auth)
+	}
+
+	//transport = socket
 
 	protocol := thrift.NewTBinaryProtocolFactoryDefault()
 
@@ -122,7 +148,7 @@ func newConnection(params *ConnParams) (*Connection, error) {
 
 	conn.resetStatus()
 
-	conn.transport = transport
+	conn.transport = &transport
 
 	return conn, nil
 }
@@ -142,7 +168,7 @@ func (p *Connection) close() error {
 		return fmt.Errorf("Error status closing session with hive: [%s]", *response.Status.ErrorMessage)
 	}
 
-	err = p.getTransport().Close()
+	err = (*p.getTransport()).Close()
 	if err != nil {
 		return err
 	}
@@ -157,20 +183,47 @@ func (p *Connection) Execute(query string) (string, error) {
 
 	response, err := p.client.ExecuteStatement(req)
 
-	code := "error"
-	if response != nil {
-		code = response.Status.GetStatusCode().String()
+	status := ""
+
+	if response.IsSetStatus() {
+
+		statusResp := response.GetStatus()
+
+		errorCode := ""
+		errorMessage := ""
+		infoMessages := []string{}
+		sqlState := ""
+
+		if statusResp.IsSetErrorCode() {
+			errorCode = fmt.Sprint(statusResp.GetErrorCode())
+		}
+
+		if statusResp.IsSetErrorMessage() {
+			errorMessage = statusResp.GetErrorMessage()
+		}
+
+		if statusResp.IsSetInfoMessages() {
+			infoMessages = statusResp.GetInfoMessages()
+		}
+
+		if statusResp.IsSetSqlState() {
+			sqlState = statusResp.GetSqlState()
+		}
+
+		statusCode := statusResp.GetStatusCode()
+
+		status = fmt.Sprintf("Status code: %s\nSql state:%s\nInfo messages: %v\nError code: %s\nError Message: %s\n", statusCode, sqlState, infoMessages, errorCode, errorMessage)
 	}
 
 	if err != nil {
-		return code, err
+		return status, err
 	}
 
 	p.operationHandle = response.OperationHandle
 
 	p.status = HiveRunning
 
-	return code, nil
+	return status, nil
 }
 
 //FetchOne fetches one row of data from Hive
